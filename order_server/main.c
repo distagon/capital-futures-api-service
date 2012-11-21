@@ -1,10 +1,23 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <windows.h>
 #include <winsock2.h>
 #include "orderapi.h"
 
-int main(void);
-int main(void) {
+static int __defaultport=1677;
+
+int main(int argc,char** argv);
+int main(int argc,char** argv) {
+
+
+    if(argc == 1) {
+        printf("usage: order_server [port_number]\n"
+        "\t port_number is server bind port,client will connect with this port"
+        "\n default port is 1677\n");
+    }
+    else __defaultport=atoi(argv[1]);
+
+
 
     //init Windows socket
     WSADATA wsaData;
@@ -25,7 +38,7 @@ int main(void) {
 
     struct sockaddr_in sin;
     sin.sin_family=AF_INET;
-    sin.sin_port=htons(1677);
+    sin.sin_port=htons(__defaultport);
     sin.sin_addr.S_un.S_addr=htonl(INADDR_ANY);
     if (bind(__ls,(struct sockaddr*)&sin,sizeof(sin))==SOCKET_ERROR)
     {
