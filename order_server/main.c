@@ -8,17 +8,27 @@ static int __defaultport=1677;
 
 extern char  RunCommand(int __cs); //declare on command.c
 
+char LoginId[32];
+char Password[128];
+
 int main(int argc,char** argv);
 int main(int argc,char** argv) {
 
 
-    if(argc == 1) {
-        printf("usage: order_server [port_number]\n"
+    if(argc < 3) {
+        printf("usage: order_server LoginID Password [port_number]\n"
+        "\tHi,you have not assign Capital Future LoginID and Password.\n");
+        return 0;
+    }
+
+    if(argc == 3) {
+        printf("usage: order_server LoginID Password [port_number]\n"
         "\t port_number is server bind port,client will connect with this port"
         "\n default port is 1677\n");
     }
-    else __defaultport=atoi(argv[1]);
-
+    else __defaultport=atoi(argv[3]);
+    strcpy(LoginId, argv[1]);
+    strcpy(Password,argv[2]);
 
 
     //init Windows socket
