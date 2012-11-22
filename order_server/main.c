@@ -6,6 +6,8 @@
 
 static int __defaultport=1677;
 
+extern char  RunCommand(int __cs); //declare on command.c
+
 int main(int argc,char** argv);
 int main(int argc,char** argv) {
 
@@ -63,14 +65,8 @@ int main(int argc,char** argv) {
         return 0;
     }
 
-    char buffer;
-    int  _r;
-    while(1) {
-        _r=recv(__cs,&buffer,1,0);
-        if(_r <= 0) break;
-
-        buffer++;
-        send(__cs,&buffer,1,0);
+    while(RunCommand(__cs) == 1) {
+        printf("Finish one command\n");
     }
 
     closesocket(__cs);
