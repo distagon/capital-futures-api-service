@@ -1,8 +1,10 @@
 #include <windows.h>
 #include <winsock2.h>
 #include <stdio.h>
+#include "orderapi.h"
 
-
+extern char LoginId[32];    //declare on main.c,LoginID
+extern char Password[128];  //declare on main.c,Login Password
 /*
     command list
     1:login
@@ -52,15 +54,20 @@ char  __run_command_parse(int socket,void* cmd,int cmdsize) {
     _r = 1;
     switch (yes[0]) {
         case 1:
-        printf("Login\n");
+        printf("%s Login ...\n",LoginId);
+        _r = OL_LoginServer(LoginId,Password);
+        Printf("return %d\n",_r);
+        _r = 1;
         break;
 
         case 2:
         printf("Select a account\n");
+        OL_SetTradeAccount(yes[1]);
         break;
 
         case 3:
         printf("Logout\n");
+        OL_Bye();
         break;
 
         case 4:
