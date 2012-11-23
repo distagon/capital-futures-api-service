@@ -43,6 +43,29 @@ static UserAccount __ua[8];
 static int  __account_total = 0;
 static int  __account_select=-1;
 
+char __order(char* name,unsigned short int type,unsigned short int dailyflag,unsigned short int buysell,char* price,int n);
+char __order(char* name,unsigned short int type,unsigned short int dailyflag,unsigned short int buysell,char* price,int n) {
+    char __res_msg[128];
+    int  __res_msg_size=128;
+
+    char _r;
+
+    _r = SKOrderLib_SendFutureOrder(
+                __account[0]
+                ,name   //contrace name
+                ,type   //ROD? IOK? FOK ?
+                ,dailyflag  //daily trade ?
+                ,buysell    //buy ? sell ?
+                ,price  //price ? or market ?
+                ,n      //amount
+                ,__res_msg
+                ,&__res_msg_size
+                ) ;
+
+    printf("SKOrderLib_SendFutureOrder() return %d\n",_r);
+    return _r;
+}
+
 
 static char __load_ql(void);
 static char __load_ql(void) {
@@ -158,6 +181,14 @@ char OL_SetTradeAccount(int index) {
     __account_select = index-1;return 1;
 }
 
+//char __order(name,ROD|IOC|FOK,Daily,buysell,price,amount);
+char OL_OrderMarket(char* Stockname,unsigned char amount,char DailyFlag,char BSFlag) {
+    return __order(Stockname,TYPE_IOC,(DailyFlag>0?1:0),(BSFlag>0?1:0),"M",amount);
+}
+
+char OL_OrderPrice (char* Stockname,char* price,unsigned char amount,char DailyFlag,char BSFlag) {
+    return __order(Stockname,TYPE_ROD,(DailyFlag>0?1:0),(BSFlag>0?1:0),price,amount);
+}
 
 void OL_Bye(void) {
     __account_select = -1;
@@ -165,27 +196,6 @@ void OL_Bye(void) {
     __free_ql();
 }
 
-char OL_Order(char* Stockname) {
-    char __res_msg[128];
-    int  __res_msg_size=128;
-
-    char _r;
-
-    _r = SKOrderLib_SendFutureOrder(
-                __account[0]
-                ,Stockname
-                ,0
-                ,0
-                ,0
-                ,"M"
-                ,1
-                ,__res_msg
-                ,&__res_msg_size
-                ) ;
-
-    printf("SKOrderLib_SendFutureOrder() return %d\n",_r);
-    return _r;
-}
 
 //###################################################
 
