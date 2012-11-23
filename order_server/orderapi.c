@@ -38,10 +38,10 @@ static int  __stdcall (*__pointer_SendFutureOrder)  (
 ////////////////////////////////////////
 
 static HINSTANCE __lib = NULL;
-static char __account[8][16];
+static char __account[16];
 static UserAccount __ua[8];
 static int  __account_total = 0;
-static int  __account_select=-1;
+
 
 char __order(char* name,unsigned short int type,unsigned short int dailyflag,unsigned short int buysell,char* price,int n);
 char __order(char* name,unsigned short int type,unsigned short int dailyflag,unsigned short int buysell,char* price,int n) {
@@ -51,7 +51,7 @@ char __order(char* name,unsigned short int type,unsigned short int dailyflag,uns
     char _r;
 
     _r = SKOrderLib_SendFutureOrder(
-                __account[0]
+                __account
                 ,name   //contrace name
                 ,type   //ROD? IOK? FOK ?
                 ,dailyflag  //daily trade ?
@@ -105,10 +105,10 @@ static void __free_ql(void) {
 //Void __stdcall OnAccount( BSTR bstrData);
 static void __stdcall __account_pull_notify (void* bstrData);
 static void __stdcall __account_pull_notify (void* bstrData) {
-    int i = 0,j = 0;
+    int i = 0;
     short int* _p = (short int*) bstrData;
 
-    printf("Account callback notify.\n");
+    printf("Account callback notify.");
 
     for(i = 0; _p[i] != ',' ; i++) {
         __ua[__account_total].Market[i] = (char)(_p[i]);
@@ -117,36 +117,34 @@ static void __stdcall __account_pull_notify (void* bstrData) {
     _p+=(i+1);
 
 
-    for(i = 0; _p[i] != ',' ; i++,j++) {
-        __account[__account_total][j] = _p[i];
+    for(i = 0; _p[i] != ',' ; i++) {
         __ua[__account_total].BranchName[i] = (char)(_p[i]);
     }
     __ua[__account_total].BranchName[i] = 0;
     _p+=(i+1);
 
-    
+
     for(i = 0; _p[i] != ',' ; i++) {
         __ua[__account_total].BranchID[i] = (char)(_p[i]);
     }
     __ua[__account_total].BranchID[i] = 0;
     _p+=(i+1);
 
-    
-    for(i = 0; _p[i] != ',' ; i++,j++) {
-        __account[__account_total][j] = _p[i];
+
+    for(i = 0; _p[i] != ',' ; i++) {
         __ua[__account_total].Account[i] = (char)(_p[i]);
     };
     __ua[__account_total].Account[i] = 0;
     _p+=(i+1);
-    __account[__account_total][j] = 0;
-    
+
+
     for(i = 0; _p[i] != ',' ; i++) {
         __ua[__account_total].IdentityNumber[i] = (char)(_p[i]);
     };
     __ua[__account_total].IdentityNumber[i] = 0;
-    
 
-    printf("[%d][%s]\n",__account_total,__account[__account_total]);
+
+    printf("[%s][%s]\n",__ua[__account_total].BranchName,__ua[__account_total].Account);
     __account_total++;
 }
 
@@ -178,7 +176,9 @@ UserAccount* OL_GetUserAccount(int* number) {
 
 char OL_SetTradeAccount(int index) {
     if(index > 8 || index < 0) return -1;
-    __account_select = index-1;return 1;
+    sprintf(__account,"%s%s",__ua[index-1].BranchName,__ua[index-1].Account);
+    printf("Accout string for order is [%s]\n",__account);
+    return 1;
 }
 
 //char __order(name,ROD|IOC|FOK,Daily,buysell,price,amount);
@@ -191,7 +191,6 @@ char OL_OrderPrice (char* Stockname,char* price,unsigned char amount,char DailyF
 }
 
 void OL_Bye(void) {
-    __account_select = -1;
     __account_total  = 0;
     __free_ql();
 }
