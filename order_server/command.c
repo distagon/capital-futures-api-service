@@ -35,15 +35,45 @@ extern char Password[128];  //declare on main.c,Login Password
     char:size|char:command->4
 
     5:commit market order & push directly
-    char:size|char:command->5|char:Buy/Short Flag|char:amount
+    char:size|char:command->5|Cstr:name|char:amount|char:daily flag|char:Buy/Short Flag
 
     6:commit price order
-    char:size|char:command->6|Cstr:price|char:Buy/Short Flag|char:amount
+    char:size|char:command->6|Cstr:name|Cstr:price|char:amount|char:daily flag|char:Buy/Short Flag
 
     7:push all order
     char:size|char:command->7
 
 */
+char __parse_order_market(char* yes);
+char __parse_order_market(char* yes) {
+    char __n[16];
+    char* _index;
+
+    _index = yes;
+    strcpy(__n,_index);
+    _index += (strlen(__n) + 1);
+    printf("parse [%s][%d][%d][%d]\n",__n,_index[0],_index[1],_index[2]);
+    //OL_OrderMarket(__n,_index[0],_index[1],_index[2]);
+    return 1;
+}
+
+char __parse_order_price(char* yes);
+char __parse_order_price(char* yes) {
+    char __n[16];
+    char __p[64];
+
+    char* _index;
+    _index = yes;
+    strcpy(__n,_index);
+    _index += (strlen(__n) + 1);
+
+    strcpy(__p,_index);
+    _index += (strlen(__p) + 1);
+
+    printf("parse [%s][%s][%d][%d][%d]\n",__n,__p,_index[0],_index[1],_index[2]);
+    //OL_OrderPrice(__n,__p,_index[0],_index[1],_index[2]);
+    return 1;
+}
 
 char  __run_command_parse(int socket,void* cmd,int cmdsize);
 char  __run_command_parse(int socket,void* cmd,int cmdsize) {
@@ -56,7 +86,7 @@ char  __run_command_parse(int socket,void* cmd,int cmdsize) {
         case 1:
         printf("%s Login ...\n",LoginId);
         _r = OL_LoginServer(LoginId,Password);
-        Printf("return %d\n",_r);
+        printf("return %d\n",_r);
         _r = 1;
         break;
 
@@ -77,10 +107,12 @@ char  __run_command_parse(int socket,void* cmd,int cmdsize) {
 
         case 5:
         printf("push market order\n");
+        _r = __parse_order_market(yes+1);
         break;
 
         case 6:
         printf("commit price order\n");
+        _r = __parse_order_price(yes+1);
         break;
 
         case 7:
