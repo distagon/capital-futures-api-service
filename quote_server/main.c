@@ -11,9 +11,41 @@ short int       __market,__stock;
 int             __client_s=-1;
 char            LoginID[16];
 char            Password[16];
-
+int             DefaultPort=3396;
 #define WM_SOCKET WM_USER+101
 
+
+
+
+int __parse_argv(void);
+int __parse_argv(void) {
+    LPWSTR *Wargv;
+    int argc;
+    char __dp[16];
+
+    Wargv = CommandLineToArgvW(GetCommandLineW(), &argc);
+    if          ( Wargv == NULL ) {
+        printf("CommandLineToArgvW failed\n");
+        return 0;
+    } else if   (argc < 3) {
+        printf("command argement error\n");
+        LocalFree(Wargv);
+        return 0;
+    } else {
+        WideCharToMultiByte(437, 0, Wargv[1], -1, LoginID, 16, NULL, NULL);
+        printf("Login ID %s\n",LoginID);
+        WideCharToMultiByte(437, 0, Wargv[2], -1, Password,16, NULL, NULL);
+        printf("Password %s\n",Password);
+
+        if (argc >= 4) {
+            WideCharToMultiByte(437, 0, Wargv[3], -1, __dp,16, NULL, NULL);
+            DefaultPort = atoi(__dp);
+        }
+        printf("default port %d\n",DefaultPort);
+    }
+    LocalFree(Wargv);
+    return 1;
+}
 
 DWORD WINAPI __get_tick_thread(LPVOID lpArg);
 DWORD WINAPI __get_tick_thread(LPVOID lpArg) {
@@ -142,7 +174,7 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
     HWND hwnd;
     MSG Msg;
 
-
+    if (__parse_argv() != 1) return 0;
 
     //<Window Class>--------------------------------------------
     wc.cbSize        = sizeof(WNDCLASSEX);
@@ -193,7 +225,7 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 
     struct sockaddr_in sin; 
     sin.sin_family=AF_INET; 
-    sin.sin_port=htons(1111); 
+    sin.sin_port=htons(DefaultPort);
     sin.sin_addr.S_un.S_addr=htonl(INADDR_ANY);
     if (bind(s,(struct sockaddr*)&sin,sizeof(sin))==SOCKET_ERROR) 
     { 
