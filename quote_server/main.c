@@ -9,6 +9,9 @@ HANDLE          __ref_get_data_thread = NULL;
 int             __last_trade_id = 0;
 short int       __market,__stock;
 int             __client_s=-1;
+char            LoginID[16];
+char            Password[16];
+
 #define WM_SOCKET WM_USER+101
 
 
@@ -92,7 +95,7 @@ void SocketHaveData(HWND hwnd,int _socket,LPARAM _l) {
             {
                 if(buffer[0] == '1') {
                     __ref_get_data_thread = NULL;
-                    QL_LoginServer("","","");
+                    QL_LoginServer(LoginID,Password);
                     QL_AddCallBack((long)ConnectN,(long)TickN);
                     QL_ConnectDataBase();
                 }
