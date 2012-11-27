@@ -1,8 +1,5 @@
-#include <w32api.h>
-#define WINVER WindowsVista
 #include <windows.h> 
 #include <winsock2.h> 
-#include <ws2tcpip.h>
 #include <stdio.h>
 #include "quoteapi.h"
 
@@ -62,8 +59,6 @@ void    __stdcall TickN    ( short sMarketNo, short sStockidx, int nPtr){
 void SocketHaveData(HWND hwnd,int _socket,LPARAM _l);
 void SocketHaveData(HWND hwnd,int _socket,LPARAM _l) {
 
-    struct sockaddr_in Cadd;
-    int Cadd_len=sizeof(Cadd);
     SOCKET _sn;
     char buffer[256];
     int bi;
@@ -78,7 +73,7 @@ void SocketHaveData(HWND hwnd,int _socket,LPARAM _l) {
     switch (WSAGETSELECTEVENT(_l)) 
     { 
         case FD_ACCEPT:
-            _sn=accept(_socket,(struct sockaddr*)&Cadd,&Cadd_len);
+            _sn=accept(_socket,NULL,NULL);
             if (_socket==INVALID_SOCKET) printf("accept() fail\n");
             if(__client_s == -1) {
                 __client_s = _sn;
