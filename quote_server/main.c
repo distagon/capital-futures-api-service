@@ -52,7 +52,7 @@ DWORD WINAPI __get_tick_thread(LPVOID lpArg) {
     TTick   data;
     int __local_nptr = 0;
     char buffer[16];
-    
+
     while(1) {
         while(__local_nptr < __last_trade_id) {
             QL_GetTick(__market,__stock,__local_nptr,&data);
@@ -94,7 +94,6 @@ void    __stdcall TickN    ( short sMarketNo, short sStockidx, int nPtr){
 void SocketHaveData(HWND hwnd,int _socket,LPARAM _l);
 void SocketHaveData(HWND hwnd,int _socket,LPARAM _l) {
 
-    SOCKET _sn;
     char buffer[256];
     int bi;
 
@@ -108,12 +107,13 @@ void SocketHaveData(HWND hwnd,int _socket,LPARAM _l) {
     switch (WSAGETSELECTEVENT(_l)) 
     { 
         case FD_ACCEPT:
-            _sn=accept(_socket,NULL,NULL);
-            if (_socket==INVALID_SOCKET) printf("accept() fail\n");
             if(__client_s == -1) {
-                __client_s = _sn;
+                __client_s=accept(_socket,NULL,NULL);
+                if (__client_s==INVALID_SOCKET) {
+                    printf("accept() fail\n");
+                    __client_s = -1;
+                } else WSAAsyncSelect(__client_s,hwnd,WM_SOCKET,FD_READ|FD_CLOSE);
             }
-            WSAAsyncSelect(_sn,hwnd,WM_SOCKET,FD_READ|FD_CLOSE);
             break;
 
         case FD_READ:
@@ -204,7 +204,7 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
         return 0;
     } 
     //</Window Class>--------------------------------------------
-    
+
 
 
 
