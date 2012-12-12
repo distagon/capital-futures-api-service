@@ -73,7 +73,7 @@ void SocketHaveData(HWND hwnd,int _socket,LPARAM _l) {
                 if (__client_s==INVALID_SOCKET) {
                     printf("accept() fail\n");
                     __client_s = -1;
-                } else WSAAsyncSelect(__client_s,hwnd,WM_SOCKET,FD_READ|FD_CLOSE);
+                } else WSAAsyncSelect(__client_s,hwnd,WM_SOCKET,FD_READ);
             }
             break;
 
@@ -85,17 +85,18 @@ void SocketHaveData(HWND hwnd,int _socket,LPARAM _l) {
             {
                 printf("recv() fail\n");
                 closesocket(_socket);
-            } else bi = RunCommand(buffer);
-            
-            if(bi == 0) {
-                closesocket(_socket);
-                DestroyWindow(hwnd);
+            } else {
+                if (RunCommand(buffer) == 0) {
+                    closesocket(_socket);
+                    PostMessage(hwnd,WM_CLOSE,0,0);
+                }
             }
             break;
 
 
 
         case FD_CLOSE:
+            printf("recv a FD_CLOSE event\n");
             closesocket(_socket);
             break; 
     }
@@ -104,14 +105,12 @@ void SocketHaveData(HWND hwnd,int _socket,LPARAM _l) {
 LRESULT CALLBACK WndProc(HWND hwnd,UINT uMsg,WPARAM wParam,LPARAM lParam);
 LRESULT CALLBACK WndProc(HWND hwnd,UINT uMsg,WPARAM wParam,LPARAM lParam) 
 { 
-    switch(uMsg) 
+    switch(uMsg)
     { 
         case WM_SOCKET:
             SocketHaveData(hwnd,wParam,lParam);
             break;
-        case WM_CLOSE:
-            DestroyWindow(hwnd);
-            break;
+
         case WM_DESTROY:
             PostQuitMessage(0);
             break;
