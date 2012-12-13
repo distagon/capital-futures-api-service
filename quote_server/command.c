@@ -75,6 +75,8 @@ static int  _state = _Start;
 static int  _cmdsize = 0;
 static int  _fillcur = 0;
 static char cmdbuf[64];
+static int  __last_trade_id = 0;
+static short int __market,__stock;
 
 extern char LoginID[16]; //define in main.c
 extern char Password[16];//define in main.c
@@ -88,12 +90,18 @@ void        __stdcall ConnectN ( int nKind, int nCode ) {
 static void __stdcall TickN    ( short sMarketNo, short sStockidx, int nPtr);
 void        __stdcall TickN    ( short sMarketNo, short sStockidx, int nPtr){
     printf("Tick callback notify. sMarketNo = %d,sStockidx = %d,nPtr = %d\n",sMarketNo,sStockidx,nPtr);
+    __market        = sMarketNo;
+    __stock         = sStockidx;
+    __last_trade_id = nPtr;
 }
 
 
 
 static int WhatCommand(void);
 static int WhatCommand(void) {
+    TTick   data;
+    int     index;
+
     switch (cmdbuf[0]) {
         case 1:
         case 2:
@@ -116,6 +124,11 @@ static int WhatCommand(void) {
             break;
 
         case 6:
+            index = *((UINT32*)(cmdbuf+1));
+            if(index <= __last_trade_id) {
+                QL_GetTick(__market,__stock,index,&data);
+                printf("index %d data. tick price is %d\n",index,data.m_nClose);
+            }
             break;
     }
     
