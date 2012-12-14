@@ -88,6 +88,7 @@ static short int    __stock;
 
 extern char	LoginID[16]; //define in main.c
 extern char	Password[16];//define in main.c
+extern int	ClientSocket;//define in main.c
 
 static void __stdcall ConnectN ( int nKind, int nCode );
 void	    __stdcall ConnectN ( int nKind, int nCode )
@@ -149,12 +150,59 @@ int RunCommand(char data)
 }
 
 
+
+
+
+
+
+
+
+
+void __send_result_OK();
+void __send_result_OK()
+{
+	char __b[2];
+
+	if(ClientSocket == -1)
+		return;
+
+	__b[0] = 1;__b[1]=0;
+	send(ClientSocket,__b,2,0);
+}
+
+
+void __send_result_Error(char number);
+void __send_result_Error(char number)
+{
+	char __b[2];
+
+	if(ClientSocket == -1)
+		return;
+
+	__b[0] = 1;__b[1]=number;
+	send(ClientSocket,__b,2,0);
+}
+
+
+void __send_Tick(void* data,char size);
+void __send_Tick(void* data,char size)
+{
+	if(ClientSocket == -1)
+		return;
+
+	send(ClientSocket,&size,1,0);
+	send(ClientSocket,data,size,0);
+}
+
+
 char _evLogin(void)
 {
 	_D(("_evLogin\n"));
 	QL_LoginServer(LoginID,Password);
 	QL_AddCallBack((long)ConnectN,(long)TickN);
 	QL_ConnectDataBase();
+
+	__send_result_OK();
 	return 1;
 }
 
@@ -162,6 +210,8 @@ char _evLogout(void)
 {
 	_D(("_evLogout\n"));
 	QL_Bye();
+
+	__send_result_OK();
 	return 1;
 }
 
@@ -171,6 +221,7 @@ char _evWatch(void)
 	_D(("Watch is %s\n",_cmdbuf+1));
 	QL_Request(_cmdbuf+1);
 
+	__send_result_OK();
 	return 1;
 }
 
@@ -186,6 +237,7 @@ char _evPull(void)
 	{
 		QL_GetTick(__market,__stock,index,&data);
 		_D(("index %d data. tick price is %d\n",index,data.m_nClose));
+		__send_Tick(&data,(char)sizeof(TTick));
 	}
 
 	return 1;
