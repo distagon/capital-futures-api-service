@@ -9,16 +9,17 @@
 #endif
 
 static const char   __szClassName[] = "quoteview";
-static int          __client_s=-1;
 static int          __default_port=3396;
 #define WM_SOCKET WM_USER+101
 
-extern int RunCommand(char data); //define in command.c
+extern int RunCommand(char data); //define from command.c
 
-extern char LoginID[16];        //export to command.c
-extern char Password[16];       //export to command.c
+extern char LoginID[16];	//export to command.c
+extern char Password[16];	//export to command.c
+extern int  ClientSocket;	//export to command.c
 char LoginID[16];
 char Password[16];
+int  ClientSocket=-1;
 
 
 
@@ -80,16 +81,23 @@ void SocketHaveData(HWND hwnd,int _socket,LPARAM _l) {
 	switch (WSAGETSELECTEVENT(_l))
 	{
 		case FD_ACCEPT:
-			if(__client_s == -1)
+			__bi=accept(_socket,NULL,NULL);
+			if (__bi==INVALID_SOCKET)
 			{
-				__client_s=accept(_socket,NULL,NULL);
-				if (__client_s==INVALID_SOCKET)
+				printf("accept() fail\n");
+			}
+			else
+			{
+				if(ClientSocket != -1)
 				{
-					printf("accept() fail\n");
-					__client_s = -1;
-				} 
+					//We only support one connect
+					closesocket(__bi);
+				}
 				else
-					WSAAsyncSelect(__client_s,hwnd,WM_SOCKET,FD_READ);
+				{
+					ClientSocket = __bi;
+					WSAAsyncSelect(ClientSocket,hwnd,WM_SOCKET,FD_READ);
+				}
 			}
 			break;
 
