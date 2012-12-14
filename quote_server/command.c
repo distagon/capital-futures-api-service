@@ -67,92 +67,127 @@ Server exit
 */
 
 
+#ifdef DEBUG
+#define _D(x)	printf x
+#else
+#define _D(x)
+#endif
 
-#define _Start      1
-#define _FILLING    2
+#define _START		1
+#define _FILLING	2
 
-static int  _state = _Start;
-static int  _cmdsize = 0;
-static int  _fillcur = 0;
-static char cmdbuf[64];
-static int  __last_trade_id = 0;
-static short int __market,__stock;
+static int          _state    = _START;
+static int          _cmdsize  = 0;
+static int          _fillcur  = 0;
+static char         _cmdbuf   [64];
+static char         _resultb  [4];
+static int          _last_i   = 0;
+static short int    __market;
+static short int    __stock;
 
-extern char LoginID[16]; //define in main.c
-extern char Password[16];//define in main.c
+
+extern char	LoginID[16]; //define in main.c
+extern char	Password[16];//define in main.c
 
 static void __stdcall ConnectN ( int nKind, int nCode );
-void        __stdcall ConnectN ( int nKind, int nCode ) {
-    printf("Connect callback notify. nKind = %d , nCode = %d\n",nKind,nCode);
+void	    __stdcall ConnectN ( int nKind, int nCode )
+{
+	printf("Connect callback notify. nKind = %d , nCode = %d\n",nKind,nCode);
 }
 
 
 static void __stdcall TickN    ( short sMarketNo, short sStockidx, int nPtr);
-void        __stdcall TickN    ( short sMarketNo, short sStockidx, int nPtr){
-    printf("Tick callback notify. sMarketNo = %d,sStockidx = %d,nPtr = %d\n",sMarketNo,sStockidx,nPtr);
-    __market        = sMarketNo;
-    __stock         = sStockidx;
-    __last_trade_id = nPtr;
+void	    __stdcall TickN    ( short sMarketNo, short sStockidx, int nPtr)
+{
+	_D(("Tick callback notify. sMarketNo = %d,sStockidx = %d,nPtr = %d\n",sMarketNo,sStockidx,nPtr));
+	__market  = sMarketNo;
+	__stock   = sStockidx;
+	_last_i   = nPtr;
 }
 
+char _evLogin(void);
+char _evLogout(void);
+char _evWatch(void);
+char _evPull(void);
 
 
 static int WhatCommand(void);
-static int WhatCommand(void) {
-    TTick   data;
-    int     index;
-
-    switch (cmdbuf[0]) {
-        case 1:
-        case 2:
-            printf("bp1\n");
-            QL_LoginServer(LoginID,Password);
-            QL_AddCallBack((long)ConnectN,(long)TickN);
-            QL_ConnectDataBase();
-            break;
-
-        case 3:
-            QL_Bye();
-            break;
-
-        case 4:
-            return 0;
-            
-        case 5:
-            printf("bp2,watch is %s\n",cmdbuf+1);
-            QL_Request(cmdbuf+1);
-            break;
-
-        case 6:
-            index = *((UINT32*)(cmdbuf+1));
-            if(index <= __last_trade_id) {
-                QL_GetTick(__market,__stock,index,&data);
-                printf("index %d data. tick price is %d\n",index,data.m_nClose);
-            }
-            break;
-    }
-    
-    return 1;
+static int WhatCommand(void)
+{
+	if        (_cmdbuf[0] == 4)    {return 0;} //Exit command
+	else if   (_cmdbuf[0] == 2)    {_evLogin();return 1;}
+	else if   (_cmdbuf[0] == 3)    {_evLogout();return 1;}
+	else if   (_cmdbuf[0] == 5)    {_evWatch();return 1;}
+	else if   (_cmdbuf[0] == 6)    {_evPull();return 1;}
+	else      return 1;
 }
 
 extern int RunCommand(char data);
-int RunCommand(char data) {
+int RunCommand(char data)
+{
+	if	( _state == _START)
+	{
+		_cmdsize = data;
+		_fillcur = 0;
+		_state = _FILLING;
+	}
 
-    if( _state == _Start) {
-        _cmdsize = data;
-        _fillcur = 0;
-        _state = _FILLING;
-    }
+	else if	(_state == _FILLING)
+	{
+		_cmdbuf[_fillcur] = data;
+		_fillcur ++;
+		if( _fillcur == _cmdsize)
+		{
+			/*parse command*/
+			if( WhatCommand() == 0 )
+				return 0;
+			_state = _START;
+		}
+	}
 
-    else if (_state == _FILLING) {
-        cmdbuf[_fillcur] = data;
-        _fillcur ++;
-        if( _fillcur == _cmdsize) {
-            /*parse command*/
-            if( WhatCommand() == 0 ) return 0;
-            _state = _Start;
-        }
-    }
-
-    return 1;
+	return 1;
 }
+
+
+char _evLogin(void)
+{
+	_D(("_evLogin\n"));
+	QL_LoginServer(LoginID,Password);
+	QL_AddCallBack((long)ConnectN,(long)TickN);
+	QL_ConnectDataBase();
+	return 1;
+}
+
+char _evLogout(void)
+{
+	_D(("_evLogout\n"));
+	QL_Bye();
+	return 1;
+}
+
+char _evWatch(void)
+{
+	_D(("_evWatch\n"));
+	_D(("Watch is %s\n",_cmdbuf+1));
+	QL_Request(_cmdbuf+1);
+
+	return 1;
+}
+
+char _evPull(void)
+{
+	TTick   data;
+	int     index;
+
+	_D(("_evPull\n"));
+
+	index = *((UINT32*)(_cmdbuf+1));
+	if(index <= _last_i)
+	{
+		QL_GetTick(__market,__stock,index,&data);
+		_D(("index %d data. tick price is %d\n",index,data.m_nClose));
+	}
+
+	return 1;
+}
+

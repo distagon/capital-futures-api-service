@@ -2,6 +2,12 @@
 #include <windows.h>
 #include "quoteapi.h"
 
+#ifdef DEBUG
+#define _D(x)	printf x
+#else
+#define _D(x)
+#endif
+
 //DLL function . use LoadLibrary / GetProcAddress to get function address
 static int  __stdcall (*__pointer_SKQuoteLib_GetVersion)      (char* lpszVersion,int* pnSize);
 static int  __stdcall (*__pointer_SKQuoteLib_Initialize)      (char* lpszLoginID,char* lpszPassword);
@@ -73,65 +79,68 @@ int __stdcall SKQuoteLib_AttachFutureTradeInfoCallBack ( [in] long CallBack)
 static HINSTANCE    __lib = NULL;
 
 static char __load_ql(void);
-static char __load_ql(void) {
-    void* __funcp;
+static char __load_ql(void)
+{
+	void* __funcp;
 
-    __lib = LoadLibrary("SKQuoteLib.dll");
-    if(__lib == NULL) return -1;
+	__lib = LoadLibrary("SKQuoteLib.dll");
+	if(__lib == NULL) return -1;
 
-    __funcp = GetProcAddress(__lib,"SKQuoteLib_GetVersion");
-    if(__funcp == NULL) return -1;
-    __pointer_SKQuoteLib_GetVersion = __funcp;
+	__funcp = GetProcAddress(__lib,"SKQuoteLib_GetVersion");
+	if(__funcp == NULL) return -1;
+	__pointer_SKQuoteLib_GetVersion = __funcp;
 
-    __funcp = GetProcAddress(__lib,"SKQuoteLib_Initialize");
-    if(__funcp == NULL) return -1;
-    __pointer_SKQuoteLib_Initialize = __funcp;
+	__funcp = GetProcAddress(__lib,"SKQuoteLib_Initialize");
+	if(__funcp == NULL) return -1;
+	__pointer_SKQuoteLib_Initialize = __funcp;
 
-    __funcp = GetProcAddress(__lib,"SKQuoteLib_EnterMonitor");
-    if(__funcp == NULL) return -1;
-    __pointer_SKQuoteLib_EnterMonitor = __funcp;
+	__funcp = GetProcAddress(__lib,"SKQuoteLib_EnterMonitor");
+	if(__funcp == NULL) return -1;
+	__pointer_SKQuoteLib_EnterMonitor = __funcp;
 
-    __funcp = GetProcAddress(__lib,"SKQuoteLib_LeaveMonitor");
-    if(__funcp == NULL) return -1;
-    __pointer_SKQuoteLib_LeaveMonitor = __funcp;
+	__funcp = GetProcAddress(__lib,"SKQuoteLib_LeaveMonitor");
+	if(__funcp == NULL) return -1;
+	__pointer_SKQuoteLib_LeaveMonitor = __funcp;
 
-    __funcp = GetProcAddress(__lib,"SKQuoteLib_AttachConnectionCallBack");
-    if(__funcp == NULL) return -1;
-    __pointer_SKQuoteLib_AttachConnectionCallBack = __funcp;
+	__funcp = GetProcAddress(__lib,"SKQuoteLib_AttachConnectionCallBack");
+	if(__funcp == NULL) return -1;
+	__pointer_SKQuoteLib_AttachConnectionCallBack = __funcp;
 
-    __funcp = GetProcAddress(__lib,"SKQuoteLib_AttachQuoteCallBack");
-    if(__funcp == NULL) return -1;
-    __pointer_SKQuoteLib_AttachQuoteCallBack = __funcp;
+	__funcp = GetProcAddress(__lib,"SKQuoteLib_AttachQuoteCallBack");
+	if(__funcp == NULL) return -1;
+	__pointer_SKQuoteLib_AttachQuoteCallBack = __funcp;
 
-    __funcp = GetProcAddress(__lib,"SKQuoteLib_AttachTicksCallBack");
-    if(__funcp == NULL) return -1;
-    __pointer_SKQuoteLib_AttachTicksCallBack = __funcp;
+	__funcp = GetProcAddress(__lib,"SKQuoteLib_AttachTicksCallBack");
+	if(__funcp == NULL) return -1;
+	__pointer_SKQuoteLib_AttachTicksCallBack = __funcp;
 
-    __funcp = GetProcAddress(__lib,"SKQuoteLib_AttachTicksGetCallBack");
-    if(__funcp == NULL) return -1;
-    __pointer_SKQuoteLib_AttachTicksGetCallBack = __funcp;
+	__funcp = GetProcAddress(__lib,"SKQuoteLib_AttachTicksGetCallBack");
+	if(__funcp == NULL) return -1;
+	__pointer_SKQuoteLib_AttachTicksGetCallBack = __funcp;
 
-    __funcp = GetProcAddress(__lib,"SKQuoteLib_RequestTicks");
-    if(__funcp == NULL) return -1;
-    __pointer_SKQuoteLib_RequestTicks = __funcp;
+	__funcp = GetProcAddress(__lib,"SKQuoteLib_RequestTicks");
+	if(__funcp == NULL) return -1;
+	__pointer_SKQuoteLib_RequestTicks = __funcp;
 
-    __funcp = GetProcAddress(__lib,"SKQuoteLib_RequestStocks");
-    if(__funcp == NULL) return -1;
-    __pointer_SKQuoteLib_RequestStocks = __funcp;
+	__funcp = GetProcAddress(__lib,"SKQuoteLib_RequestStocks");
+	if(__funcp == NULL) return -1;
+	__pointer_SKQuoteLib_RequestStocks = __funcp;
 
-    __funcp = GetProcAddress(__lib,"SKQuoteLib_GetTick");
-    if(__funcp == NULL) return -1;
-    __pointer_SKQuoteLib_GetTick = __funcp;
+	__funcp = GetProcAddress(__lib,"SKQuoteLib_GetTick");
+	if(__funcp == NULL) return -1;
+	__pointer_SKQuoteLib_GetTick = __funcp;
 
-    return 1;
+	return 1;
 }
 
 static void __free_ql(void);
-static void __free_ql(void) {
-    if(__lib != NULL) {
-        FreeLibrary(__lib);
-        __lib = NULL;
-    }
+static void __free_ql(void)
+{
+	if(__lib != NULL)
+	{
+		FreeLibrary(__lib);
+		__lib = NULL;
+	}
 }
 
 ////////////////////////////////////////
@@ -140,52 +149,54 @@ static void __free_ql(void) {
 
 
 //###################################################
-char QL_LoginServer(char* username, char* password) {
-    char _r;
-    _r = __load_ql();
-    
-    printf("Load SKQuoteLib.dll %d\n",_r);
-    if (_r == -1) return -1;
+char QL_LoginServer(char* username, char* password)
+{
 
-    _r = SKQuoteLib_Initialize(username,password);
-    printf("Login ... %d\n",_r);
-    if (_r != 0) return -1;
+	if(__load_ql() == -1)
+		return -1;
 
-    return 1;
+	if(SKQuoteLib_Initialize(username,password) != 0)
+		return -1;
+
+	return 1;
 }
 
 
-char QL_AddCallBack(long connect,long ticks) {
-    printf("add connect callback %d\n",SKQuoteLib_AttachConnectionCallBack ( connect ));
-    printf("add get tick callback %d\n",SKQuoteLib_AttachTicksCallBack ( ticks ));
-    return 1;
+char QL_AddCallBack(long connect,long ticks)
+{
+	SKQuoteLib_AttachConnectionCallBack ( connect );
+	SKQuoteLib_AttachTicksCallBack ( ticks );
+	return 1;
 }
 
-char QL_ConnectDataBase(void) {
-    printf("Connect Database %d\n",SKQuoteLib_EnterMonitor());
-    return 1;
+char QL_ConnectDataBase(void)
+{
+	SKQuoteLib_EnterMonitor();
+	return 1;
 }
 
 
 
-char QL_Request(char* stockname) {
-    short int __page;
-    
-    __page = -1;
-    printf("Request '%s' , return %d\n",stockname,SKQuoteLib_RequestTicks(&__page,stockname));
+char QL_Request(char* stockname)
+{
+	short int __page;
 
-    return 1;
+	__page = -1;
+	SKQuoteLib_RequestTicks(&__page,stockname);
+
+	return 1;
 }
 
-char QL_GetTick(short sMarketNo, short sStockidx,int nPtr, TTick* pTick) {
-    SKQuoteLib_GetTick(sMarketNo,sStockidx,nPtr,pTick);
-    return 1;
+char QL_GetTick(short sMarketNo, short sStockidx,int nPtr, TTick* pTick)
+{
+	SKQuoteLib_GetTick(sMarketNo,sStockidx,nPtr,pTick);
+	return 1;
 }
 
-void QL_Bye(void) {
-    printf("disconnect database %d\n",SKQuoteLib_LeaveMonitor() );
-    printf("Release API Library\n");
-    __free_ql();
+void QL_Bye(void)
+{
+	SKQuoteLib_LeaveMonitor();
+	__free_ql();
 }
 //###################################################
 
