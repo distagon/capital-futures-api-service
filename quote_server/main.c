@@ -8,6 +8,8 @@
 #define _D(x)
 #endif
 
+#define	_L(x)	printf x
+
 static const char   __szClassName[] = "quoteview";
 static int          __default_port=3396;
 #define WM_SOCKET WM_USER+101
@@ -33,13 +35,13 @@ int __parse_argv(void) {
 	__wargv = CommandLineToArgvW(GetCommandLineW(), &__argc);
 	if        (__wargv == NULL) 
 	{
-		printf("CommandLineToArgvW failed\n");
+		_D(("CommandLineToArgvW failed\n"));
 		return 0;
 	} 
 
 	else if   (__argc < 3) 
 	{
-		printf("command argement error\n");
+		_L(("info:\tcommand line argement is not assign\n"));
 		LocalFree(__wargv);
 		return 0;
 	} 
@@ -47,16 +49,16 @@ int __parse_argv(void) {
 	else 
 	{
 		WideCharToMultiByte(437, 0, __wargv[1], -1, LoginID, 16, NULL, NULL);
-		printf("Login ID %s\n",LoginID);
+		_L(("info:\tLogin ID %s\n",LoginID));
 		WideCharToMultiByte(437, 0, __wargv[2], -1, Password,16, NULL, NULL);
-		printf("Password %s\n",Password);
+		_L(("info:\tPassword %s\n",Password));
 
 		if (__argc >= 4) 
 		{
 			WideCharToMultiByte(437, 0, __wargv[3], -1, __dp,16, NULL, NULL);
 			__default_port = atoi(__dp);
 		}
-		printf("connect port %d\n",__default_port);
+		_L(("info:\tconnect port %d\n",__default_port));
 	}
 
 	LocalFree(__wargv);
@@ -84,7 +86,7 @@ void SocketHaveData(HWND hwnd,int _socket,LPARAM _l) {
 			__bi=accept(_socket,NULL,NULL);
 			if (__bi==INVALID_SOCKET)
 			{
-				printf("accept() fail\n");
+				_D(("accept() fail\n"));
 			}
 			else
 			{
@@ -107,7 +109,7 @@ void SocketHaveData(HWND hwnd,int _socket,LPARAM _l) {
 			__bi=recv(_socket,&__buffer,1,0);
 			if	(__bi <= 0)
 			{
-				printf("recv %d,incorrent\n",__bi);
+				_D(("recv %d,incorrent\n",__bi));
 				closesocket(_socket);
 				PostMessage(hwnd,WM_CLOSE,0,0);
 			}
@@ -124,7 +126,6 @@ void SocketHaveData(HWND hwnd,int _socket,LPARAM _l) {
 
 
 		case FD_CLOSE:
-			printf("recv a FD_CLOSE event\n");
 			closesocket(_socket);
 			break;
 	}
@@ -135,7 +136,7 @@ LRESULT CALLBACK WndProc(HWND hwnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
 { 
 
 	if        (uMsg == WM_SOCKET)           {SocketHaveData(hwnd,wParam,lParam);return 0;}
-	else if   (uMsg == WM_DESTROY)          {PostQuitMessage(0);return 0;}
+	else if   (uMsg == WM_DESTROY)          {_L(("info:\tTerminate\n"));PostQuitMessage(0);return 0;}
 
 	else      return                        DefWindowProc(hwnd,uMsg,wParam,lParam);
 }
@@ -145,6 +146,9 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 	WNDCLASSEX wc;
 	HWND hwnd;
 	MSG Msg;
+
+	_L(("info:\tQuote server start\n"));
+
 
 	if (__parse_argv() != 1)
 		return 0;
@@ -165,7 +169,7 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 
 	if(!RegisterClassEx(&wc))
 	{
-		printf("Window Registration Failed! Job aborted\n");
+		_D(("RegisterClassEx() fail\n"));
 		return 0;
 	}
 
@@ -184,7 +188,7 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 			,NULL);
 	if (hwnd==NULL)
 	{
-		printf("Window Creation Failed! Job aborted\n");
+		_D(("Window Creation Failed! Job aborted\n"));
 		return 0;
 	}
 	//</Window Class>--------------------------------------------
@@ -197,13 +201,13 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 	WORD wVersionRequested=MAKEWORD(2,2);
 	if (WSAStartup(wVersionRequested,&wsaData)!=0)
 	{
-		printf("WSAStartup() Failed\n");
+		_D(("WWSAStartup() Failed! Job aborted\n"));
 		return 0;
 	}
 	SOCKET s=socket(AF_INET,SOCK_STREAM,IPPROTO_TCP);
 	if (s==INVALID_SOCKET)
 	{
-		printf("socket() Failed\n");
+		_D(("socket() Failed! Job aborted\n"));
 		return 0;
 	}
 
@@ -213,13 +217,15 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 	sin.sin_addr.S_un.S_addr=htonl(INADDR_ANY);
 	if (bind(s,(struct sockaddr*)&sin,sizeof(sin))==SOCKET_ERROR)
 	{
-		printf("bind() Failed\n");
+		_D(("bind() Failed! Job aborted\n"));
+		closesocket(s);
 		return 0;
 	}
 
 	if (listen(s,3)==SOCKET_ERROR)
-	{ 
-		printf("listen() Failed\n");
+	{
+		_D(("Listen() Failed! Job aborted\n"));
+		closesocket(s);
 		return 0;
 	}
 
