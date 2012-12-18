@@ -73,6 +73,8 @@ Server exit
 #define _D(x)
 #endif
 
+#define _L(x)	printf x
+
 #define _START		1
 #define _FILLING	2
 
@@ -80,7 +82,6 @@ static int          _state    = _START;
 static int          _cmdsize  = 0;
 static int          _fillcur  = 0;
 static char         _cmdbuf   [64];
-static char         _resultb  [4];
 static int          _last_i   = 0;
 static short int    __market;
 static short int    __stock;
@@ -93,7 +94,7 @@ extern int	ClientSocket;//define in main.c
 static void __stdcall ConnectN ( int nKind, int nCode );
 void	    __stdcall ConnectN ( int nKind, int nCode )
 {
-	printf("Connect callback notify. nKind = %d , nCode = %d\n",nKind,nCode);
+	_D(("Connect callback notify. nKind = %d , nCode = %d\n",nKind,nCode));
 }
 
 
@@ -110,7 +111,6 @@ char _evLogin(void);
 char _evLogout(void);
 char _evWatch(void);
 char _evPull(void);
-
 
 static int WhatCommand(void);
 static int WhatCommand(void)
@@ -197,49 +197,105 @@ void __send_Tick(void* data,char size)
 
 char _evLogin(void)
 {
-	_D(("_evLogin\n"));
-	QL_LoginServer(LoginID,Password);
-	QL_AddCallBack((long)ConnectN,(long)TickN);
-	QL_ConnectDataBase();
+	char _r;
 
+	_L(("info:\tstart login command\n"));
+
+	_r = QL_LoginServer(LoginID,Password);
+	if(_r == -1)
+	{
+		_L(("info:\tlogin server is fail\n"));
+		__send_result_Error(-1);
+		return -1;
+	}
+
+	_r = QL_AddCallBack((long)ConnectN,(long)TickN);
+	if(_r == -1)
+	{
+		_L(("info:\tRegister call back function is fail\n"));
+		__send_result_Error(-1);
+		return -1;
+	}
+
+
+	_r = QL_ConnectDataBase();
+	if(_r == -1)
+	{
+		_L(("info:\tjoin data base is fail\n"));
+		__send_result_Error(-1);
+		return -1;
+	}
+
+	_L(("info:\tLogin process OK,send result\n"));
 	__send_result_OK();
 	return 1;
 }
 
 char _evLogout(void)
 {
-	_D(("_evLogout\n"));
+	_L(("info:\tstart logout command\n"));
 	QL_Bye();
 
+	_L(("info:\tlogout process OK,send result\n"));
 	__send_result_OK();
 	return 1;
 }
 
 char _evWatch(void)
 {
-	_D(("_evWatch\n"));
-	_D(("Watch is %s\n",_cmdbuf+1));
-	QL_Request(_cmdbuf+1);
+	char _r;
 
-	__send_result_OK();
-	return 1;
+	_L(("info:\tstart Watch command\n"));
+	_D(("Watch is %s\n",_cmdbuf+1));
+
+	_r = QL_Request(_cmdbuf+1);
+	_D(("QL_Request return %d\n",_r));
+
+	if( _r == 1)
+	{
+		_L(("info:\tWatch process OK,send result\n"));
+		__send_result_OK();
+	}
+	else
+	{
+		_L(("info:\tWatch process is fail\n"));
+		__send_result_Error(-1);
+	}
+	return _r;
 }
 
 char _evPull(void)
 {
 	TTick   data;
 	int     index;
+	char _r;
 
-	_D(("_evPull\n"));
+	_D(("start Pull command\n"));
 
 	index = *((UINT32*)(_cmdbuf+1));
-	if(index <= _last_i)
+	_D(("index is %d\n",index));
+
+	if(index > _last_i)
 	{
-		QL_GetTick(__market,__stock,index,&data);
-		_D(("index %d data. tick price is %d\n",index,data.m_nClose));
-		__send_Tick(&data,(char)sizeof(TTick));
+		_L(("info:\tout of index,fail\n"));
+		__send_result_Error(-1);
+		return -1;
 	}
 
-	return 1;
+
+
+	_r = QL_GetTick(__market,__stock,index,&data);
+	if(_r == 1)
+	{
+		__send_Tick(&data,(char)sizeof(TTick));
+	}
+	else
+	{
+		_D(("get %d tick fail\n",index));
+		__send_result_Error(-1);
+	}
+
+	_D(("Pull process OK,send result\n"));
+	return _r;
 }
 
