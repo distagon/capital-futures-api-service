@@ -2,6 +2,13 @@
 #include <windows.h>
 #include "orderapi.h"
 
+#ifdef DEBUG
+#define _D(x)	printf x
+#else
+#define _D(x)
+#endif
+
+#define	_L(x)	printf x
 
 /*
    int SKOrderLib_Initialize( [in]const char* lpszUser, [in]const char* lpszPassword)
@@ -38,9 +45,9 @@ static int  __stdcall (*__pointer_SendFutureOrder)  (
 ////////////////////////////////////////
 
 static HINSTANCE __lib = NULL;
-static char __account[16];
 static UserAccount __ua[8];
 static int  __account_total = 0;
+static char __account[16];
 
 
 char __order(char* name,unsigned short int type,unsigned short int dailyflag,unsigned short int buysell,char* price,int n);
@@ -103,7 +110,10 @@ static void __free_ol(void);
 static void __free_ol(void)
 {
 	if(__lib != NULL)
-		FreeLibrary(__lib); __lib = NULL;
+	{
+		FreeLibrary(__lib);
+		__lib = NULL;
+	}
 }
 
 //Void __stdcall OnAccount( BSTR bstrData);
@@ -113,7 +123,7 @@ static void __stdcall __account_pull_notify (void* bstrData)
 	int i = 0;
 	short int* _p = (short int*) bstrData;
 
-	printf("Account callback notify.");
+	_D(("orderapi.c:Account callback notify.\n"));
 
 	for(i = 0; _p[i] != ',' ; i++)
 		__ua[__account_total].Market[i] = (char)(_p[i]);
@@ -144,7 +154,7 @@ static void __stdcall __account_pull_notify (void* bstrData)
 	__ua[__account_total].IdentityNumber[i] = 0;
 
 
-	printf("[%s][%s]\n",__ua[__account_total].BranchName,__ua[__account_total].Account);
+	_D(("[%s][%s]\n",__ua[__account_total].BranchName,__ua[__account_total].Account));
 	__account_total++;
 }
 
@@ -155,17 +165,29 @@ static void __stdcall __account_pull_notify (void* bstrData)
 //###################################################
 char OL_LoginServer(char* username, char* password)
 {
-	if( __load_ol() == -1)
-		return -1;
+	char _r;
+	_D(("orderapi.c:OL_LoginServer\n"));
 
-	printf("SKOrderLib_Initialize() return %d\n"
-			,SKOrderLib_Initialize(username,password) );
-	printf("SKOrderLib_RegisterOnAccountCallBack() return %d\n"
-			,SKOrderLib_RegisterOnAccountCallBack((long)__account_pull_notify) );
-	printf("SKOrderLib_GetUserAccount() return %d\n"
-			,SKOrderLib_GetUserAccount() );
-	printf("SKOrderLib_ReadCertByID() return %d\n"
-			,SKOrderLib_ReadCertByID(username) );
+	_r = __load_ol();
+	_D(("__load_ol() return %d\n",_r));
+	if (_r == -1) return -1;
+
+	_r = SKOrderLib_Initialize(username,password);
+	_D(("SKOrderLib_Initialize() return %d\n",_r));
+	if (_r == -1) return -1;
+
+	_r = SKOrderLib_RegisterOnAccountCallBack((long)__account_pull_notify);
+	_D(("SKOrderLib_RegisterOnAccountCallBack() return %d\n",_r));
+	if (_r == -1) return -1;
+
+	_r = SKOrderLib_GetUserAccount();
+	_D(("SKOrderLib_GetUserAccount() return %d\n",_r));
+	if (_r == -1) return -1;
+
+	_r = SKOrderLib_ReadCertByID(username);
+	_D(("SKOrderLib_ReadCertByID() return %d\n",_r));
+	if (_r == -1) return -1;
+
 	return 1;
 }
 
@@ -179,25 +201,44 @@ UserAccount* OL_GetUserAccount(int* number)
 
 char OL_SetTradeAccount(int index)
 {
-	if(index > 8 || index < 0) return -1;
+
+	_D(("orderapi.c:OL_SetTradeAccount\n"));
+
+	if(index > 8 || index < 0)
+	{
+		_D(("orderapi.c:OL_SetTradeAccount():Out of index.total 8,and start is 1\n"));
+		return -1;
+	}
+
 	sprintf(__account,"%s%s",__ua[index-1].BranchName,__ua[index-1].Account);
-	printf("Accout string for order is [%s]\n",__account);
+	_D(("orderapi.c:OL_SetTradeAccount():Accout string for order is [%s]\n",__account));
 	return 1;
 }
 
 //char __order(name,ROD|IOC|FOK,Daily,buysell,price,amount);
 char OL_OrderMarket(char* Stockname,unsigned char amount,char DailyFlag,char BSFlag)
 {
-	return __order(Stockname,TYPE_IOC,(DailyFlag>0?1:0),(BSFlag>0?1:0),"M",amount);
+	char _r;
+	_D(("orderapi.c:OL_OrderMarket\n"));
+
+	_r = __order(Stockname,TYPE_IOC,(DailyFlag>0?1:0),(BSFlag>0?1:0),"M",amount);
+	_D(("orderapi.c:__order is return %d\n",_r));
+	return _r;
 }
 
 char OL_OrderPrice (char* Stockname,char* price,unsigned char amount,char DailyFlag,char BSFlag)
 {
-	return __order(Stockname,TYPE_ROD,(DailyFlag>0?1:0),(BSFlag>0?1:0),price,amount);
+	char _r;
+	_D(("orderapi.c:OL_OrderPrice\n"));
+
+	_r = __order(Stockname,TYPE_ROD,(DailyFlag>0?1:0),(BSFlag>0?1:0),price,amount);
+	_D(("orderapi.c:__order is return %d\n",_r));
+	return _r;
 }
 
 void OL_Bye(void)
 {
+	_D(("orderapi.c:OL_Bye\n"));
 	__account_total  = 0;
 	__free_ol();
 }
