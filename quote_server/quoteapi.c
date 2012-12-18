@@ -8,6 +8,8 @@
 #define _D(x)
 #endif
 
+#define _L(x)	printf x
+
 //DLL function . use LoadLibrary / GetProcAddress to get function address
 static int  __stdcall (*__pointer_SKQuoteLib_GetVersion)      (char* lpszVersion,int* pnSize);
 static int  __stdcall (*__pointer_SKQuoteLib_Initialize)      (char* lpszLoginID,char* lpszPassword);
@@ -83,6 +85,8 @@ static char __load_ql(void)
 {
 	void* __funcp;
 
+	_D(("__load_ql()\n"));
+
 	__lib = LoadLibrary("SKQuoteLib.dll");
 	if(__lib == NULL) return -1;
 
@@ -136,6 +140,7 @@ static char __load_ql(void)
 static void __free_ql(void);
 static void __free_ql(void)
 {
+	_D(("__free_ql()\n"));
 	if(__lib != NULL)
 	{
 		FreeLibrary(__lib);
@@ -151,13 +156,21 @@ static void __free_ql(void)
 //###################################################
 char QL_LoginServer(char* username, char* password)
 {
+	_D(("QL_LoginServer\n"));
 
 	if(__load_ql() == -1)
+	{
+		_D(("QL_LoginServer,__load_ql() Fail\n"));
 		return -1;
+	}
 
 	if(SKQuoteLib_Initialize(username,password) != 0)
+	{
+		_D(("QL_LoginServer,SKQuoteLib_Initialize() Fail\n"));
 		return -1;
+	}
 
+	_D(("QL_LoginServer,OK\n"));
 	return 1;
 }
 
@@ -166,13 +179,17 @@ char QL_AddCallBack(long connect,long ticks)
 {
 	SKQuoteLib_AttachConnectionCallBack ( connect );
 	SKQuoteLib_AttachTicksCallBack ( ticks );
+	_D(("QL_AddCallBack,OK\n"));
 	return 1;
 }
 
 char QL_ConnectDataBase(void)
 {
-	SKQuoteLib_EnterMonitor();
-	return 1;
+	int _r;
+	_r = SKQuoteLib_EnterMonitor();
+	_D(("QL_ConnectDataBase,return %d\n",_r));
+
+	return ( _r == 0?1:-1);
 }
 
 
@@ -180,21 +197,29 @@ char QL_ConnectDataBase(void)
 char QL_Request(char* stockname)
 {
 	short int __page;
+	int _r;
 
+	_D(("QL_Request,name %s\n",stockname));
 	__page = -1;
-	SKQuoteLib_RequestTicks(&__page,stockname);
+	_r = SKQuoteLib_RequestTicks(&__page,stockname);
+	_D(("QL_Request,return %d\n",_r));
 
-	return 1;
+	return ( _r == 0?1:-1);
 }
 
 char QL_GetTick(short sMarketNo, short sStockidx,int nPtr, TTick* pTick)
 {
-	SKQuoteLib_GetTick(sMarketNo,sStockidx,nPtr,pTick);
-	return 1;
+	int _r;
+
+	_r = SKQuoteLib_GetTick(sMarketNo,sStockidx,nPtr,pTick);
+	_D(("QL_GetTick,return %d\n",_r));
+
+	return ( _r == 0?1:-1);
 }
 
 void QL_Bye(void)
 {
+	_D(("QL_Bye\n"));
 	SKQuoteLib_LeaveMonitor();
 	__free_ql();
 }
