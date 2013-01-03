@@ -10,24 +10,64 @@
 
 #define	_L(x)	printf x
 
-static const char   __szClassName[] = "quoteview";
-static int          __default_port=3396;
 #define WM_SOCKET WM_USER+101
 
-extern int RunCommand(char data); //define from command.c
-
+extern void SocketHaveData(HWND hwnd,int _socket,LPARAM _l); //define from command.c
 extern char LoginID[16];	//export to command.c
 extern char Password[16];	//export to command.c
-extern int  ClientSocket;	//export to command.c
 char LoginID[16];
 char Password[16];
-int  ClientSocket=-1;
 
 
+static const char __szClassName[] = "quoteview";
+static int __default_port=3396;
+static SOCKET AcceptS;
 
+
+static SOCKET NewSocket(int port);
+SOCKET NewSocket(int port)
+{
+	WSADATA wsaData;
+	WORD wVersionRequested=MAKEWORD(2,2);
+	SOCKET _s;
+
+	if (WSAStartup(wVersionRequested,&wsaData)!=0)
+	{
+		_D(("WWSAStartup() Failed! Job aborted\n"));
+		return -1;
+	}
+
+	_s=socket(AF_INET,SOCK_STREAM,IPPROTO_TCP);
+	if (_s==INVALID_SOCKET)
+	{
+		_D(("socket() Failed! Job aborted\n"));
+		return -1;
+	}
+
+	struct sockaddr_in sin;
+	sin.sin_family=AF_INET;
+	sin.sin_port=htons(port);
+	sin.sin_addr.S_un.S_addr=htonl(INADDR_ANY);
+	if (bind(_s,(struct sockaddr*)&sin,sizeof(sin))==SOCKET_ERROR)
+	{
+		_D(("bind() Failed! Job aborted\n"));
+		closesocket(_s);
+		return -1;
+	}
+
+	if (listen(_s,3)==SOCKET_ERROR)
+	{
+		_D(("Listen() Failed! Job aborted\n"));
+		closesocket(_s);
+		return -1;
+	}
+
+	return _s;
+}
 
 int __parse_argv(void);
-int __parse_argv(void) {
+int __parse_argv(void)
+{
 	LPWSTR	*__wargv;
 	int	__argc;
 	char	__dp[16];
@@ -63,72 +103,6 @@ int __parse_argv(void) {
 
 	LocalFree(__wargv);
 	return 1;
-}
-
-
-void SocketHaveData(HWND hwnd,int _socket,LPARAM _l);
-void SocketHaveData(HWND hwnd,int _socket,LPARAM _l) {
-
-	char __buffer;
-	int  __bi;
-
-
-	if (WSAGETSELECTERROR(_l))
-	{
-		closesocket(_socket);
-		return;
-	}
-
-
-	switch (WSAGETSELECTEVENT(_l))
-	{
-		case FD_ACCEPT:
-			__bi=accept(_socket,NULL,NULL);
-			if (__bi==INVALID_SOCKET)
-			{
-				_D(("accept() fail\n"));
-			}
-			else
-			{
-				if(ClientSocket != -1)
-				{
-					//We only support one connect
-					closesocket(__bi);
-				}
-				else
-				{
-					ClientSocket = __bi;
-					WSAAsyncSelect(ClientSocket,hwnd,WM_SOCKET,FD_READ);
-				}
-			}
-			break;
-
-
-
-		case FD_READ:
-			__bi=recv(_socket,&__buffer,1,0);
-			if	(__bi <= 0)
-			{
-				_D(("recv %d,incorrent\n",__bi));
-				closesocket(_socket);
-				PostMessage(hwnd,WM_CLOSE,0,0);
-			}
-			else 
-			{
-				if (RunCommand(__buffer) == 0)
-				{
-					closesocket(_socket);
-					PostMessage(hwnd,WM_CLOSE,0,0);
-				}
-			}
-			break;
-
-
-
-		case FD_CLOSE:
-			closesocket(_socket);
-			break;
-	}
 }
 
 LRESULT CALLBACK WndProc(HWND hwnd,UINT uMsg,WPARAM wParam,LPARAM lParam);
@@ -197,39 +171,13 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 
 
 	//<create server socket>
-	WSADATA wsaData;
-	WORD wVersionRequested=MAKEWORD(2,2);
-	if (WSAStartup(wVersionRequested,&wsaData)!=0)
+	AcceptS = NewSocket(__default_port);
+	if (AcceptS == -1)
 	{
-		_D(("WWSAStartup() Failed! Job aborted\n"));
+		_D(("Create socket failed! Job aborted\n"));
 		return 0;
 	}
-	SOCKET s=socket(AF_INET,SOCK_STREAM,IPPROTO_TCP);
-	if (s==INVALID_SOCKET)
-	{
-		_D(("socket() Failed! Job aborted\n"));
-		return 0;
-	}
-
-	struct sockaddr_in sin;
-	sin.sin_family=AF_INET;
-	sin.sin_port=htons(__default_port);
-	sin.sin_addr.S_un.S_addr=htonl(INADDR_ANY);
-	if (bind(s,(struct sockaddr*)&sin,sizeof(sin))==SOCKET_ERROR)
-	{
-		_D(("bind() Failed! Job aborted\n"));
-		closesocket(s);
-		return 0;
-	}
-
-	if (listen(s,3)==SOCKET_ERROR)
-	{
-		_D(("Listen() Failed! Job aborted\n"));
-		closesocket(s);
-		return 0;
-	}
-
-	WSAAsyncSelect(s,hwnd,WM_SOCKET,FD_ACCEPT|FD_CLOSE);
+	WSAAsyncSelect(AcceptS,hwnd,WM_SOCKET,FD_ACCEPT|FD_CLOSE);
 	//</create server socket>
 
 
@@ -241,8 +189,7 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 		TranslateMessage(&Msg); 
 		DispatchMessage(&Msg); 
 	} 
-	closesocket(s);
+	closesocket(AcceptS);
 	WSACleanup();
 	return 1;
 }
-
