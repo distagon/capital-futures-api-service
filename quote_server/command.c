@@ -92,7 +92,7 @@ static int _last_i = 0;
 static short int __market;
 static short int __stock;
 static SOCKET ClientSocket = -1;
-static int _request_index = -1;
+static int _curr_index = -1;
 static char _thread_stop = 0;
 static HANDLE _ref_thread = NULL;
 
@@ -160,32 +160,24 @@ void	    __stdcall TickN    ( short sMarketNo, short sStockidx, int nPtr)
 	}
 
 	_last_i = nPtr;
+	if (_ref_thread != NULL)
+		ResumeThread(_ref_thread);
 }
 
 static DWORD WINAPI _tick_thread(LPVOID _d);
 DWORD WINAPI _tick_thread(LPVOID _d)
 {
-	TTick   data;
-	char _r;
+	TTick data;
+
 
 	while(1)
 	{
-		if (_thread_stop != 0)
-			break;
-
-		if (_request_index != -1 && _request_index < _last_i)
+		while(_curr_index < _last_i)
 		{
-			_r = QL_GetTick(__market,__stock,_request_index,&data);
-			if (_r == 1)
-			{
-				_D(("get %d tick\n",_request_index));
-				__send_Tick(&data,(char)sizeof(TTick));
-			}
-			else
-			{
-				_D(("get %d tick fail\n",_request_index));
-				__send_result_Error(-1);
-			}
+			QL_GetTick(__market,__stock,_curr_index,&data);
+			_D(("%d,%d - %d\n",_last_i,_curr_index,data.m_nClose));
+			__send_Tick(&data,sizeof(TTick));
+			_curr_index++;
 		}
 		SuspendThread(_ref_thread);
 	}
@@ -338,13 +330,6 @@ char _evLogout(void)
 {
 	_L(("info:\tstart logout command\n"));
 
-	if(_ref_thread != NULL)
-	{
-		_D(("Stop thread\n"));
-		_thread_stop = 1;
-		ResumeThread(_ref_thread);
-	}
-
 	QL_Bye();
 
 	_L(("info:\tlogout process OK,send result\n"));
@@ -382,20 +367,16 @@ char _evPull(void)
 
 	_D(("start Pull command\n"));
 
+	if (_ref_thread != NULL)
+		__send_result_Error(-1);
+
 	index = *((UINT32*)(_cmdbuf+1));
 	_D(("index is %d\n",index));
-
-	if (index > _last_i)
-	{
-		_L(("info:\tout of index,fail\n"));
+	if(index < 0)
 		__send_result_Error(-1);
-		return -1;
-	}
 
-	if (_ref_thread == NULL)
-		_ref_thread = CreateThread( NULL, 0,_tick_thread, NULL,CREATE_SUSPENDED, NULL);
-	_request_index = index;
-	ResumeThread(_ref_thread);
+	_curr_index = index;
+	_ref_thread = CreateThread(NULL, 0,_tick_thread, NULL,0, NULL);
 
 	_D(("Pull process OK,send result\n"));
 	return 1;
