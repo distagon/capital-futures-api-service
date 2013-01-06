@@ -20,12 +20,13 @@ time.sleep(1);
 
 #pull
 ctl.send(b'\x05\x06\0\0\0\0');
-ra = ctl.recv(20);
+time.sleep(120);
+
 
 #logout
 #A=struct.pack('2b',2,3);
 ctl.send(b'\x01\x03');
-time.sleep(10);
+time.sleep(3);
 
 #exit
 #A=struct.pack('2b',2,4);
