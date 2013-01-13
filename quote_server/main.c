@@ -15,14 +15,16 @@
 extern void SocketHaveData(HWND hwnd,int _socket,LPARAM _l); //define from command.c
 extern char LoginID[16];	//export to command.c
 extern char Password[16];	//export to command.c
+extern SOCKET ACtlS;		//export to command.c
+extern SOCKET ADataS;		//export to command.c
 char LoginID[16];
 char Password[16];
-
+SOCKET ACtlS = -1;
+SOCKET ADataS = -1;
 
 static const char __szClassName[] = "quoteview";
-static int __default_port=3396;
-static SOCKET AcceptS;
-
+static int __ctl_port=3396;
+static int __data_port=3050;
 
 static SOCKET NewSocket(int port);
 SOCKET NewSocket(int port)
@@ -70,35 +72,28 @@ int __parse_argv(void)
 {
 	LPWSTR	*__wargv;
 	int	__argc;
-	char	__dp[16];
+
 
 	__wargv = CommandLineToArgvW(GetCommandLineW(), &__argc);
-	if        (__wargv == NULL) 
+	if        (__wargv == NULL)
 	{
 		_D(("CommandLineToArgvW failed\n"));
 		return 0;
-	} 
+	}
 
-	else if   (__argc < 3) 
+	else if   (__argc < 3)
 	{
 		_L(("info:\tcommand line argement is not assign\n"));
 		LocalFree(__wargv);
 		return 0;
-	} 
+	}
 
-	else 
+	else
 	{
 		WideCharToMultiByte(437, 0, __wargv[1], -1, LoginID, 16, NULL, NULL);
 		_L(("info:\tLogin ID %s\n",LoginID));
 		WideCharToMultiByte(437, 0, __wargv[2], -1, Password,16, NULL, NULL);
 		_L(("info:\tPassword %s\n",Password));
-
-		if (__argc >= 4) 
-		{
-			WideCharToMultiByte(437, 0, __wargv[3], -1, __dp,16, NULL, NULL);
-			__default_port = atoi(__dp);
-		}
-		_L(("info:\tconnect port %d\n",__default_port));
 	}
 
 	LocalFree(__wargv);
@@ -106,9 +101,8 @@ int __parse_argv(void)
 }
 
 LRESULT CALLBACK WndProc(HWND hwnd,UINT uMsg,WPARAM wParam,LPARAM lParam);
-LRESULT CALLBACK WndProc(HWND hwnd,UINT uMsg,WPARAM wParam,LPARAM lParam) 
-{ 
-
+LRESULT CALLBACK WndProc(HWND hwnd,UINT uMsg,WPARAM wParam,LPARAM lParam)
+{
 	if        (uMsg == WM_SOCKET)           {SocketHaveData(hwnd,wParam,lParam);return 0;}
 	else if   (uMsg == WM_DESTROY)          {_L(("info:\tTerminate\n"));PostQuitMessage(0);return 0;}
 
@@ -121,8 +115,8 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 	HWND hwnd;
 	MSG Msg;
 
-	_L(("info:\tQuote server start\n"));
 
+	_L(("info:\tQuote server start\n"));
 
 	if (__parse_argv() != 1)
 		return 0;
@@ -147,7 +141,6 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 		return 0;
 	}
 
-
 	hwnd = CreateWindowEx(WS_EX_CLIENTEDGE
 			,"quoteview"
 			,"The title of my window"
@@ -171,25 +164,34 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 
 
 	//<create server socket>
-	AcceptS = NewSocket(__default_port);
-	if (AcceptS == -1)
+	ACtlS = NewSocket(__ctl_port);
+	if (ACtlS == -1)
+	{
+		_D(("Create control socket failed! Job aborted\n"));
+		return 0;
+	}
+	WSAAsyncSelect(ACtlS,hwnd,WM_SOCKET,FD_ACCEPT|FD_CLOSE);
+
+	ADataS = NewSocket(__data_port);
+	if (ADataS == -1)
 	{
 		_D(("Create socket failed! Job aborted\n"));
 		return 0;
 	}
-	WSAAsyncSelect(AcceptS,hwnd,WM_SOCKET,FD_ACCEPT|FD_CLOSE);
+	WSAAsyncSelect(ADataS,hwnd,WM_SOCKET,FD_ACCEPT|FD_CLOSE);
 	//</create server socket>
 
 
 
 	ShowWindow(hwnd,SW_SHOW);
 	UpdateWindow(hwnd);
-	while (GetMessage(&Msg,0,0,0)) 
-	{ 
-		TranslateMessage(&Msg); 
-		DispatchMessage(&Msg); 
-	} 
-	closesocket(AcceptS);
+	while (GetMessage(&Msg,0,0,0))
+	{
+		TranslateMessage(&Msg);
+		DispatchMessage(&Msg);
+	}
+	closesocket(ACtlS);
+	closesocket(ADataS);
 	WSACleanup();
 	return 1;
 }
