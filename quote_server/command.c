@@ -77,9 +77,10 @@ Server exit
 #define WM_SOCKET WM_USER+101
 
 
-extern char	LoginID[16]; //define in main.c
-extern char	Password[16];//define in main.c
-
+extern char LoginID[16]; //define in main.c
+extern char Password[16];//define in main.c
+extern SOCKET ACtlS;	//define in main.c
+extern SOCKET ADataS;	//define in main.c
 
 static int _state = _START;
 static int _cmdsize = 0;
@@ -88,46 +89,45 @@ static char _cmdbuf[64];
 static int _last_i = 0;
 static short int __market;
 static short int __stock;
-static SOCKET ClientSocket = -1;
+static SOCKET CCtlS = -1;
+static SOCKET CDataS = -1;
 static int _curr_index = -1;
 static char _thread_stop = 0;
 static HANDLE _ref_thread = NULL;
-
 
 void __send_result_OK();
 void __send_result_OK()
 {
 	char __b[2];
 
-	if (ClientSocket == -1)
+
+	if (CCtlS == -1)
 		return;
 
 	__b[0] = 1;__b[1]=0;
-	send(ClientSocket,__b,2,0);
+	send(CCtlS,__b,2,0);
 }
-
 
 void __send_result_Error(char number);
 void __send_result_Error(char number)
 {
 	char __b[2];
 
-	if (ClientSocket == -1)
+
+	if (CCtlS == -1)
 		return;
 
 	__b[0] = 1;__b[1]=number;
-	send(ClientSocket,__b,2,0);
+	send(CCtlS,__b,2,0);
 }
-
 
 void __send_Tick(void* data,char size);
 void __send_Tick(void* data,char size)
 {
-	if (ClientSocket == -1)
+	if (CDataS == -1)
 		return;
 
-	send(ClientSocket,&size,1,0);
-	send(ClientSocket,data,size,0);
+	send(CDataS,data,size,0);
 }
 
 static void __stdcall ConnectN ( int nKind, int nCode );
@@ -181,6 +181,7 @@ DWORD WINAPI _tick_thread(LPVOID _d)
 	return 0;
 }
 
+
 static inline char _accept_socket(HWND hwnd,int _socket);
 static inline char _imp_command(HWND hwnd);
 static inline char _what_command(void);
@@ -222,16 +223,25 @@ char _accept_socket(HWND hwnd,int _socket)
 		_D(("accept() fail\n"));
 		return -1;
 	}
-	else
+
+	if (_socket == ACtlS)
 	{
-		if (ClientSocket == -1)
+		if (CCtlS == -1)
 		{
-			ClientSocket = _i;
-			WSAAsyncSelect(ClientSocket,hwnd,WM_SOCKET,FD_READ);
+			CCtlS = _i;
+			WSAAsyncSelect(CCtlS,hwnd,WM_SOCKET,FD_READ);
 		}
 		else
 			closesocket(_i); //we support one pipe only
 	}
+	else
+	{
+		if(CDataS == -1)
+			CDataS = _i;
+		else
+			closesocket(_i); //we support one pipe only
+	}
+
 	return 1;
 }
 
@@ -241,11 +251,12 @@ char _imp_command(HWND hwnd)
 	char _r;
 	char _b;
 
-	_i=recv(ClientSocket,&_b,1,0);
+
+	_i=recv(CCtlS,&_b,1,0);
 	if	(_i <= 0)
 	{
 		_D(("recv %d,incorrent\n",_i));
-		closesocket(ClientSocket);
+		closesocket(CCtlS);
 		PostMessage(hwnd,WM_CLOSE,0,0);
 		_r = -1;
 	}
@@ -265,7 +276,7 @@ char _imp_command(HWND hwnd)
 			/*parse command*/
 			if (_what_command() == 0)
 			{
-				closesocket(ClientSocket);
+				closesocket(CCtlS);
 				PostMessage(hwnd,WM_CLOSE,0,0);
 			}
 			_state = _START;
@@ -289,6 +300,7 @@ char _what_command(void)
 char _evLogin(void)
 {
 	char _r;
+
 
 	_L(("info:\tstart login command\n"));
 
@@ -338,6 +350,7 @@ char _evWatch(void)
 {
 	char _r;
 
+
 	_L(("info:\tstart Watch command\n"));
 	_D(("Watch is %s\n",_cmdbuf+1));
 
@@ -367,6 +380,9 @@ char _evPull(void)
 	if (_ref_thread != NULL)
 		__send_result_Error(-1);
 
+	if (CDataS == -1)
+		__send_result_Error(-1);
+
 	index = *((UINT32*)(_cmdbuf+1));
 	_D(("index is %d\n",index));
 	if(index < 0)
@@ -374,6 +390,7 @@ char _evPull(void)
 
 	_curr_index = index;
 	_ref_thread = CreateThread(NULL, 0,_tick_thread, NULL,0, NULL);
+	__send_result_OK();
 
 	_D(("Pull process OK,send result\n"));
 	return 1;
