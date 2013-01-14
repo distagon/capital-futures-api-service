@@ -166,18 +166,23 @@ DWORD WINAPI _tick_thread(LPVOID _d)
 {
 	TTick data;
 
-
-	while(1)
+restart:
+	while(_curr_index < _last_i)
 	{
-		while(_curr_index < _last_i)
-		{
-			QL_GetTick(__market,__stock,_curr_index,&data);
-			_D(("%d,%d - %d\n",_last_i,_curr_index,data.m_nClose));
-			__send_Tick(&data,sizeof(TTick));
-			_curr_index++;
-		}
-		SuspendThread(_ref_thread);
+		if(_thread_stop == 1)
+			goto terminal;
+
+		QL_GetTick(__market,__stock,_curr_index,&data);
+		_D(("%d,%d - %d\n",_last_i,_curr_index,data.m_nClose));
+		__send_Tick(&data,sizeof(TTick));
+		_curr_index++;
 	}
+	SuspendThread(_ref_thread);
+	if (_thread_stop == 1)
+		goto terminal;
+	goto restart;
+
+terminal:
 	return 0;
 }
 
@@ -339,6 +344,9 @@ char _evLogout(void)
 {
 	_L(("info:\tstart logout command\n"));
 
+	_D(("stop thread\n"));
+	_thread_stop = 1;
+	_ref_thread = NULL;
 	QL_Bye();
 
 	_L(("info:\tlogout process OK,send result\n"));
@@ -389,6 +397,7 @@ char _evPull(void)
 		__send_result_Error(-1);
 
 	_curr_index = index;
+	_thread_stop = 0;
 	_ref_thread = CreateThread(NULL, 0,_tick_thread, NULL,0, NULL);
 	__send_result_OK();
 
