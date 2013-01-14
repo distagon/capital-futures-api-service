@@ -171,14 +171,16 @@ int WINAPI WinMain( HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLin
 		return 0;
 	}
 	WSAAsyncSelect(ACtlS,hwnd,WM_SOCKET,FD_ACCEPT|FD_CLOSE);
+	_L(("info:\tListen %d port(Control)\n",__ctl_port));
 
 	ADataS = NewSocket(__data_port);
 	if (ADataS == -1)
 	{
-		_D(("Create socket failed! Job aborted\n"));
+		_D(("Create data socket failed! Job aborted\n"));
 		return 0;
 	}
 	WSAAsyncSelect(ADataS,hwnd,WM_SOCKET,FD_ACCEPT|FD_CLOSE);
+	_L(("info:\tListen %d port(Data)\n",__data_port));
 	//</create server socket>
 
 
