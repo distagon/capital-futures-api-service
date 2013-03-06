@@ -354,12 +354,17 @@ char _evLogout(void)
 char _evWatch(void)
 {
 	char _r;
+	UINT32 _index;
 
 
 	_L(("info:\tstart Watch command\n"));
-	_D(("Watch is %s\n",_cmdbuf+1));
 
-	_r = QL_Request(_cmdbuf+1);
+	_index = *((UINT32*)(_cmdbuf+1));
+	_D(("Start point is %d\n",_index));
+
+	_D(("Watch is %s\n",_cmdbuf+5));
+
+	_r = QL_Request(_cmdbuf+5);
 	_D(("QL_Request return %d\n",_r));
 
 	if (_r == 1)
