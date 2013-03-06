@@ -5,49 +5,47 @@
 
 /*command
 
-login
+struct login ;
+struct logout;
+struct exit;
+struct watch;
+struct pull;
+
 struct Login {
-    char command:=2;
+    char := 2;
 }
 
 logout
 struct Logout {
-    char command:=3;
+    char :=3;
 }
 
 exit
 struct Exit {
-    char command:=4;
+    char :=4;
 }
 
 watch Commodity name
 struct Watch {
-    char command:=5;
-    char watch[10];
-}
-
-pull price
-struct Pull {
-    char command:=6;
-    int  index; -> little_endian
+    char :=5;
+    int index;
+    cstring name[7];
 }
 */
 
 /*logic
 
-server(this)                                client
-        <-----------------------------------Login
-report login result >>>>>>>>>>>>>>>>>>>>>>>>
+server(this)				client
+	<-------------------------------Login
+report login result >>>>>>>>>>>>>>>>>>>>
 
-        <-----------------------------------Watch
-report watch result >>>>>>>>>>>>>>>>>>>>>>>>
+	<-------------------------------Watch
 
-        <-----------------------------------Pull
-report price >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+report price >>>>>>>>>>>>>>>>>>>>>>>>>>>
 
-report price >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+report price >>>>>>>>>>>>>>>>>>>>>>>>>>>
 
-report price >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+report price >>>>>>>>>>>>>>>>>>>>>>>>>>>
 
 .
 .
@@ -56,13 +54,12 @@ report price >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 .
 .
 .
-        <-----------------------------------Logout
-report logout result >>>>>>>>>>>>>>>>>>>>>>>
+	<-------------------------------Logout
+report logout result >>>>>>>>>>>>>>>>>>>
 
-        <-----------------------------------Exit
+	<-------------------------------Exit
 Server exit
 */
-
 
 #ifdef DEBUG
 #define _D(x)	printf x
