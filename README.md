@@ -1,3 +1,7 @@
+群益期貨API 的功能實作,預計提供報價介面,下單介面,回報介面.介面的實現方式用的是TCP/IP 網路介面,這是為了要實現高度的平台無關性,程式語言無關性,使用網路介面,開發策略的程式語言再也不需要強迫跟實作API的程式語言相同,此專案使用C語言實作API介面,但透過TCP/IP,策略開發者可以使用VB,perl,python,ASP.net,甚至是web cgi 來開發策略,而且不會綁死在windows系統上,例如,只要你願意,架設好一台windows 跑本專案開發的程式,你就可以使用andorid平板遠端執行你的交易策略,或者是用Mac 機器遠端執行策略,iphone 遠端監看下單狀況.
+
+
+
 # capital-futures-api-service
 Automatically exported from code.google.com/p/capital-futures-api-service
 
